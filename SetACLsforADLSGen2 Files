@@ -1,0 +1,73 @@
+Hello,
+The below scripts talks about how you can set ACLs for existing child directory and files:
+
+PS Scripts
+
+$storage ="https://<StorageAccountName.dfs.core.windows.net/"
+    $filepath = "<filsystemName>"
+    $resoucetype = "filesystem"
+    $recursive ="true"
+
+    $key ="<SAS token>"
+
+    #Note that this value will be set to all the files present in the specified filepath
+    $permission = "rwxr-xr-x" 
+
+    #Constructing the URI for querying
+
+    #current value for recursive is false. To be changed by the recursive parameter
+    $URI = $storage + $filepath +  "?recursive=" + $recursive + "&resource=" + $resoucetype + "&" + $key
+
+    #The call for listing for the filesystem
+    $Method = "GET"
+    $version = "2018-11-09"
+    $headers = @{'x-ms-version' = $version}
+
+    #invocation of the API
+    $res = Invoke-RestMethod -Uri $URI -Method $Method -Headers $headers
+
+    for ($i =0 ;$i -lt $res.paths.count; $i++){
+
+     $test = $res.paths.GetValue($i)
+     #Write-Host $test
+     Write-Host -ForegroundColor Black -BackgroundColor Cyan "File Name is->" $test.name + "Group Name is->"  $test.group + "Permissions are->"  $test.permissions + "`n"
+    }
+
+#For setting the ACL permission for the filesystem :
+$baseURL = $storage + $filepath + "/?action=setAccessControl&" + $key
+
+ $headersWithDefaultACL = @{'x-ms-version' = $version
+              'x-ms-acl' = 'user:<Users UPN>:rwx,default:user:<Users UPN>:rwx'
+              }
+
+$Method1 = "PATCH"
+$result1= Invoke-RestMethod -Uri $baseURL -Method $Method1 -Headers $headersWithDefaultACL
+
+#for setting ACL for all child items of the filesystem
+
+for ($i=0 ;$i -lt $res.paths.count; $i++){
+    
+    $temp1 = $res.paths.GetValue($i)
+    $path = $temp1.name 
+    $URL1 = $storage + $filepath +"/" + $path +"?action=setAccessControl&" + $key
+   
+    Write-Host $URL1
+
+
+
+
+
+    #value of permission being set at the top
+
+    $headers1 = @{'x-ms-version' = $version
+              'x-ms-acl' = 'user:<Users UPN>:rwx'
+              }
+
+
+
+
+$result = Invoke-RestMethod -Uri $URL1 -Method $Method1 -Headers $headers1
+
+}
+
+
